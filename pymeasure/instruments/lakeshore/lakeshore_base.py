@@ -21,6 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 #
+# modified 23 June 2025 for LS 336 (NAF)
 
 import logging
 import warnings
@@ -89,7 +90,7 @@ class LakeShoreTemperatureChannel(Channel):
             if (time() - t) > timeout:
                 raise Exception((
                                     "Timeout occurred after waiting %g seconds for "
-                                    "the LakeShore 331 temperature to reach %g %s."
+                                    "the LakeShore temperature controller to reach %g %s."
                                 ) % (timeout, target, unit))
             if should_stop():
                 return
@@ -98,13 +99,13 @@ class LakeShoreTemperatureChannel(Channel):
 class LakeShoreHeaterChannel(Channel):
     """ Heater output channel on a lakeshore temperature controller. Provides properties to query
     the output power in percent of the max, set the manual output power, heater range, and PID
-    temperature setpoint.
+    temperature setpoint. For LS336, valid for HTR 1, 2 only. RANGE not valid for LS350 and LS372.
     """
-
+    
     output = Instrument.measurement(
         'HTR? {ch}',
         """Get the heater output in percent of the max."""
-    )
+    ) 
     mout = Instrument.control(
         'MOUT? {ch}',
         'MOUT {ch},%f',
@@ -117,6 +118,37 @@ class LakeShoreHeaterChannel(Channel):
        values: off, low, medium, and high.""",
         validator=strict_discrete_set,
         values={'off': 0, 'low': 1, 'medium': 2, 'high': 3},
+        map_values=True)
+
+    setpoint = Instrument.control(
+        'SETP? {ch}', 'SETP {ch},%f',
+        """Control the setpoint temperature
+        in the preferred units of the control loop sensor."""
+    )
+
+class LakeShoreAnalogOutChannel(Channel):
+    """ Analog output channel on a lakeshore temperature controller. Provides properties to query
+    the output power in percent of the max, set the manual output power, heater range, and PID
+    temperature setpoint. PID only valid in warm up mode.  For LS336/350/372, valid for ch 3, 4 only.
+    """
+
+    
+    output = Instrument.measurement(
+        'AOut? {ch}',
+        """Get the analog output in percent of the max."""
+    ) 
+    mout = Instrument.control(
+        'MOUT? {ch}',
+        'MOUT {ch},%f',
+        """Control manual heater output in percent."""
+    )
+    range = Instrument.control(
+        'RANGE? {ch}',
+        'RANGE {ch},%i',
+        """Control analog output, which can take the
+       values: off, on.""",
+        validator=strict_discrete_set,
+        values={'off': 0, 'on': 1},
         map_values=True)
 
     setpoint = Instrument.control(
